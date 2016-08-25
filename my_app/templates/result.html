@@ -1,0 +1,61 @@
+<!doctype html>
+<title>The Result</title>
+<link rel=stylesheet type=text/css href='{{ url_for('static',filename='style2.css')}}'>
+
+<style>
+ table, th, td {
+    border: 1px solid black;
+}
+</style>
+
+<div class=page>
+  <h1>The Result</h1>
+  <div class=metanav>
+
+    <h4>
+      Based on the segments you've run lately
+      <br>
+      <br>
+<!-- <table style="width:95%">
+   <tr>
+    <th>Artist</th>
+    <th>Track</th>
+    <th>Date</th>
+    <th>Sentiment</th>
+    <th>Lex. Div.</th>
+  </tr>
+  <tr>
+    <td>{{input_artist}}</td>
+    <td>{{input_song}}</td>
+    <td>{{input_date}}</td>
+    <td>{{input_sent}}</td>
+    <td>{{input_lex}}</td>
+  </tr>
+</table> -->
+
+<br>You might like these recent hits:  <br><br>
+
+<table style="width:95%">
+   <tr>
+    <th>Runner</th>
+    <th>Segments in common</th>
+    <th>link</th>
+  </tr>
+
+  {% for athlete_names, counts, athlete_ids in table_rows %}
+
+  <tr>
+    <td>{{athlete_names}}</td>
+    <td>{{counts}}</td>
+    <td>{{athlete_ids}}</td>
+  </tr>
+
+  {% endfor %}
+
+</table>
+
+
+    </h4>
+
+  </div>
+</div>
