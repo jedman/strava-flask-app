@@ -9,13 +9,11 @@
 </style>
 
 <div class=page>
-  <h1>The Result</h1>
+  <h1>Local rivals for {{session['athlete_name']}} </h1>
   <div class=metanav>
 
     <h4>
-      Based on the segments you've run lately
-      <br>
-      <br>
+      Based on {{session['uniques']}} segments you've run lately
 <!-- <table style="width:95%">
    <tr>
     <th>Artist</th>
@@ -33,21 +31,21 @@
   </tr>
 </table> -->
 
-<br>You might like these recent hits:  <br><br>
+<br>You might like these recent hits:  <br>
 
 <table style="width:95%">
    <tr>
     <th>Runner</th>
     <th>Segments in common</th>
-    <th>link</th>
+    <th>Link to profile</th>
   </tr>
 
-  {% for athlete_names, counts, athlete_ids in table_rows %}
+  {% for athlete_names, counts, urls in table_rows %}
 
   <tr>
     <td>{{athlete_names}}</td>
     <td>{{counts}}</td>
-    <td>{{athlete_ids}}</td>
+    <td><a href="{{urls}}">{{urls}}</a></td>
   </tr>
 
   {% endfor %}

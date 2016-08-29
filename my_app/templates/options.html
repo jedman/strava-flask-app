@@ -6,13 +6,16 @@
   <div class=metanav>
     <h3>
       This app finds similar runners in your area, based on your proximity on
-      segment leaderboards for the segments you've run most recently. 
+      segment leaderboards for the segments you've run most recently.
     </h3>
     <h3>
-    Click below to authenticate with Strava.
+    Thanks for signing in, {{session['athlete_name']}}! Click below to begin searching for similar runners
+    based on segments from your most recent {{session['max_activities']}} activities.
+    <br>
+    This may take awhile.
   </h3>
 
-    <form id='userinfoform' method='post' action='index' >
+    <form id='findsegments' method='post' action='options' >
 
      <p>
      <input type='submit' value='Ok!' />
