@@ -6,6 +6,13 @@ from stravalib import Client
 
 app.secret_key = 'DONTCAREWHATTHISIS'
 
+app.question2 = {}
+app.question3 = {}
+app.question2['How many of your activities do you want us to use?']=('5',\
+                '10','20')
+app.question3['How would you like to filter the results?']=('Females Only ',\
+                                          'Males Only', 'Runs Only', 'Rides Only')
+
 @app.route('/')
 @app.route('/index', methods=['GET', 'POST'])
 def index():
@@ -38,9 +45,19 @@ def set_options():
   #render_template('waiting.html')
   session['max_activities'] = 10
   if request.method == 'GET':
-      return render_template('options.html')
-  else:
-      return redirect('/result')
+     #for clarity (temp variables)
+     q = next(iter(app.question2.keys())) 
+     #this will return the answers corresponding to q
+     [a1, a2, a3] = next(iter(app.question2.values()))
+     #save the current questions key
+     #app.currentq = q
+     return render_template('options.html',question=q,ans1=a1,ans2=a2,ans3=a3)
+  else:   #request was a POST
+     #session['question3_answered'] = 1
+     session['max_activities'] = int(request.form['max_choice'])
+     print ('retrieving ' + str(session['max_activities']) + ' activities!')
+  return redirect('/result')
+  
 
 @app.route("/result")
 def results_table():
@@ -63,6 +80,24 @@ def nearest_rivals_from_file(max_rivals = 10):
   '''get nearest rivals from file'''
   rivals = pd.DataFrame.from_csv('my_app/test_data/sorted_counts.csv')
   return rivals[1:max_rivals+1]
+
+
+@app.route('/filterby',methods=['GET', 'POST'])
+def filterby(): #remember the function name does not need to match th eURL
+  if request.method == 'GET':
+    #for clarity (temp variables)
+    q = next(iter(app.question3.keys()))
+    #this will return the answers corresponding to q
+    [a1, a2, a3, a4] = next(iter(app.question3.values()))
+    #save the current questions key
+    #app.currentq = q
+    return render_template('filterby.html',question=q,ans1=a1,ans2=a2,ans3=a3,ans4=a4)
+  else:   #request was a POST
+    #session['question3_answered'] = 1
+    session['filter_choice'] = request.form['filter_choice']
+    print ('filter choice is : ', session['filter_choice'])
+  return redirect('/main')
+
 
 def segment_ids_from_activities(client, max_activities = 5):
   # get segment ids from most recent runs
