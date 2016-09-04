@@ -1,0 +1,6 @@
+gunicorn==19.6.0
+requests
+flask>=0.11.1
+numpy
+pandas>=0.18.1
+--editable=git+https://github.com/jedman/stravalib.git#egg=stravalib

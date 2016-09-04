@@ -1,0 +1,59 @@
+<!doctype html>
+<title>The Result</title>
+<link rel=stylesheet type=text/css href='{{ url_for('static',filename='style2.css')}}'>
+
+<style>
+ table, th, td {
+    border: 1px solid black;
+}
+</style>
+
+<div class=page>
+  <h1>Local rivals for {{session['athlete_name']}} </h1>
+  <div class=metanav>
+
+    <h4>
+        Based on {{session['uniques']}} segments you've run in your most recent {{session['max_activities']}} runs
+<!-- <table style="width:95%">
+   <tr>
+    <th>Artist</th>
+    <th>Track</th>
+    <th>Date</th>
+    <th>Sentiment</th>
+    <th>Lex. Div.</th>
+  </tr>
+  <tr>
+    <td>{{input_artist}}</td>
+    <td>{{input_song}}</td>
+    <td>{{input_date}}</td>
+    <td>{{input_sent}}</td>
+    <td>{{input_lex}}</td>
+  </tr>
+</table> -->
+
+<br> You might be interested in following these similar athletes:   <br>
+
+<table style="width:95%">
+   <tr>
+    <th>Runner</th>
+    <th>Segments in common</th>
+    <th>Link to profile</th>
+  </tr>
+
+  {% for athlete_names, counts, urls in table_rows %}
+
+  <tr>
+    <td>{{athlete_names}}</td>
+    <td>{{counts}}</td>
+    <td><a href="{{urls}}">{{urls}}</a></td>
+  </tr>
+
+  {% endfor %}
+
+</table>
+
+
+    </h4>
+
+  </div>
+</div>

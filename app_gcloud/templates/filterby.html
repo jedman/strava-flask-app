@@ -1,0 +1,27 @@
+<!doctype html>
+<title>Query</title>
+<link rel=stylesheet type=text/css href='{{ url_for('static',filename='style.css')}}'>
+<div class=page>
+  <h1>Question</h1>
+
+  <div class=metanav>
+
+    {{question}}
+
+    <h4>
+      <form id='answerform' method='post' action='filterby' >
+        <p>
+          Answer: <br />
+          <input type='radio' name='filter_choice' value='Females Only' /> {{ans1}} <br />
+          <input type='radio' name='filter_choice' value='Males Only' /> {{ans2}} <br />
+          <input type='radio' name='filter_choice' value='Runs Only' /> {{ans3}} <br />
+          <input type='radio' name='filter_choice' value='Rides Only' /> {{ans4}} <br />
+        </p>
+
+        <p>
+          <input type='submit' value='Next' />
+        </p>
+      </form>
+    </h4>
+  </div>
+</div>
