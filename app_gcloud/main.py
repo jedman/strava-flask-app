@@ -1,6 +1,7 @@
 import pandas as pd
-from flask import Flask, render_template, request, redirect, make_response, session
+from flask import Flask, render_template, request, redirect, make_response, session, url_for
 from stravalib import Client
+import time, json, os
 
 app = Flask(__name__)
 app.secret_key = 'DONTCAREWHATTHISIS'
@@ -33,6 +34,7 @@ def main():
   client = Client(access_token=session['access_token'])
   athlete = client.get_athlete() # Get current athlete details
   session['athlete_name'] = athlete.firstname + ' ' + athlete.lastname
+  session['athlete_id'] = str(athlete.id)
   # segment_ids_from_activities(client, max_activities = 5) # sets segment_ids_unique
   return redirect('/options')
   #if you want a simple output of first name, last name, just use this line:
@@ -43,6 +45,8 @@ def set_options():
   # place to ask things like how many activities to use
   #render_template('waiting.html')
   session['max_activities'] = 10
+  session['context_entries'] = 10
+
   if request.method == 'GET':
      #for clarity (temp variables)
      q = next(iter(app.question2.keys()))
@@ -55,7 +59,69 @@ def set_options():
      #session['question3_answered'] = 1
      session['max_activities'] = int(request.form['max_choice'])
      print ('retrieving ' + str(session['max_activities']) + ' activities!')
-  return redirect('/result')
+  return redirect('/segments')
+
+@app.route("/segments")
+def retrieve_ids():
+    client = Client(access_token=session['access_token'])
+    segment_ids_from_activities(client, max_activities = session['max_activities'])
+
+    with open(str(session['athlete_id'])+'segments_to_do.txt', 'w') as f:
+      f.write('\n'.join(str(ids) for ids in session['segment_ids_unique']))
+    tmp = {session['athlete_id']:session['athlete_name']}
+    json.dump(dict(), open(session['athlete_id']+'segment_rivals.json','w'))
+    json.dump(dict(), open(session['athlete_id']+'athlete_names.json','w'))
+
+    return redirect("/waiting")
+
+@app.route("/waiting", methods=['GET','POST'])
+def segments_by_chunk():
+  print('starting another chunk!')
+  with open(str(session['athlete_id'])+'segments_to_do.txt', 'r') as f:
+    segment_ids_todo = f.read().splitlines()
+  segment_rivals = json.load(open(str(session['athlete_id'])+'segment_rivals.json'))
+  athlete_names = json.load(open(str(session['athlete_id'])+'athlete_names.json'))
+  chunk_size = 10
+  client = Client(access_token=session['access_token'])
+  # loop over chunks of segments
+  j = 0
+  if len(segment_ids_todo) < chunk_size:
+    chunk_size = len(segment_ids_todo)
+  for segment_id in segment_ids_todo[0:chunk_size]:
+    try:
+        leaderboard = client.get_segment_leaderboard(segment_id = segment_id,
+                                                     top_results_limit=1,
+                                                     context_entries=session['context_entries'])
+        print('on segment {}; {} to go'.format(segment_id,  len(segment_ids_todo)))
+    except:
+        # janky error handling, should specify http error -- probably need urllib2
+        print('whoops, error on {}; {} to go'.format(segment_id,  len(segment_ids_todo) ))
+    j = j + 1
+
+    segment_ids_todo.remove(segment_id) # remove from to do list
+    segment_athletes = dict()
+    for i, entry in enumerate(leaderboard):
+        # remove first entry
+        # this should not be done if athlete is within context_entries of 1st
+        if i == 0:
+          continue
+        else:
+          segment_athletes[entry.athlete_id] = entry.athlete_name
+          athlete_names[entry.athlete_id] = entry.athlete_name
+
+    segment_rivals[segment_id] = segment_athletes
+    time.sleep(0.5) # avoid time out?
+
+  json.dump(segment_rivals, open(str(session['athlete_id'])+'segment_rivals.json','w'))
+  json.dump(athlete_names, open(str(session['athlete_id'])+'athlete_names.json','w'))
+
+  if (len(segment_ids_todo) > 0):
+    with open(str(session['athlete_id'])+'segments_to_do.txt', 'w') as f:
+      f.write('\n'.join(str(ids) for ids in segment_ids_todo))
+    return redirect(url_for('segments_by_chunk', next='/'))
+  else:
+    return redirect('/result')
+
 
 
 @app.route("/result")
@@ -63,9 +129,6 @@ def results_table():
   # get the rivals data frame
   #rivals = nearest_rivals_from_file()
   client = Client(access_token=session['access_token'])
-
-  segment_ids_from_activities(client, max_activities = session['max_activities']) # sets segment_ids_unique
-
   rivals = nearest_rivals(client, max_rivals = 10)
   #rivals = nearest_rivals_from_file()
   # make urls from athlete_ids
@@ -73,7 +136,15 @@ def results_table():
   urls = [base_url + str(i) for i in rivals.index.tolist()]
   # put in list of lists
   rivals_list = zip(rivals['athlete_name'], rivals['counts'], urls)
+  cleanup()
   return render_template('result.html', table_rows = rivals_list)
+
+def cleanup():
+  '''remove the data files'''
+  os.remove(str(session['athlete_id'])+'athlete_names.json')
+  os.remove(str(session['athlete_id'])+'segment_rivals.json')
+  os.remove(str(session['athlete_id'])+'segments_to_do.txt')
+  return
 
 def nearest_rivals_from_file(max_rivals = 10):
   '''get nearest rivals from file'''
@@ -82,7 +153,7 @@ def nearest_rivals_from_file(max_rivals = 10):
 
 
 @app.route('/filterby',methods=['GET', 'POST'])
-def filterby(): #remember the function name does not need to match th eURL
+def filterby(): #remember the function namewaiting does not need to match th eURL
   if request.method == 'GET':
     #for clarity (temp variables)
     q = next(iter(app.question3.keys()))
@@ -115,9 +186,10 @@ def nearest_rivals(client,  max_rivals = 10):
   '''find the most similar runners based on most segments in common '''
 
   # get the leaderboards for all unique segments
-  segment_rivals, athlete_names = segment_leaderboards(client, context_entries = 10)
-
+  #segment_rivals, athlete_names = segment_leaderboards(client, context_entries = 10)
   # aggregate athletes from leaderboard context
+  segment_rivals = json.load(open(str(session['athlete_id'])+'segment_rivals.json'))
+  athlete_names = json.load(open(str(session['athlete_id'])+'athlete_names.json'))
   df = pd.DataFrame.from_dict(segment_rivals, orient = 'index')
   athlete_counts = df.count().to_frame('counts')
   athlete_counts.index.name='athlete_id'
@@ -133,38 +205,6 @@ def nearest_rivals(client,  max_rivals = 10):
   rival_counts = rival_counts.sort_values('counts', ascending=False)
   return rival_counts[1: max_rivals + 1] # strip off first entry, which is client athlete
 
-
-def segment_leaderboards(client, context_entries = 10):
-  '''get a dictionary with segment_id as key, with all the nearby athletes in a dict'''
-  segment_rivals = dict()
-  counter = 0
-  athlete_names = dict() # master table
-  athlete = client.get_athlete()
-
-  for segment_id in session['segment_ids_unique']:
-      counter = counter + 1
-      try:
-          leaderboard = client.get_segment_leaderboard(segment_id = segment_id,
-                                                       top_results_limit=1,
-                                                       context_entries=context_entries)
-          print('on segment {}, {} of {}'.format(segment_id, counter, session['uniques'] ))
-      except:
-          # janky error handling, should specify http error -- probably need urllib2
-          print('whoops, error on {}, {} of {}'.format(segment_id, counter, session['uniques'] ))
-
-      segment_athletes = dict()
-      for i, entry in enumerate(leaderboard):
-          # remove first entry
-          # this should not be done if athlete is within context_entries of 1st
-          if i == 0:
-            continue
-          else:
-            segment_athletes[entry.athlete_id] = entry.athlete_name
-            athlete_names[entry.athlete_id] = entry.athlete_name
-
-      segment_rivals[segment_id] = segment_athletes
-
-  return segment_rivals, athlete_names
 
 def redirectAuth(MY_STRAVA_CLIENT_ID):
     client = Client()
